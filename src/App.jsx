@@ -1491,7 +1491,8 @@ function rerollBurst() {
 
   const result = performBurstRoll(burstSize)
 
-  setBurstRerollResult(result)
+    setBurstRerollResult(result)
+
 }
 
 function performSoakRoll() {
@@ -2763,7 +2764,24 @@ if (activeTab === 'initiative') {
     JSON.stringify(updatedCharacter)
   )
 
-  setBurstResult(result)
+ setBurstResult(result)
+
+addRollToHistory({
+  type: 'burst',
+  character: characterSheet.name,
+  name: `🔥 ${selectedRoll.weaponName} — SERIA ×${burstSize}`,
+  die: selectedRoll.die,
+  result: result.successCount,
+  outcome: `${result.successCount} TRAFIENIA`,
+  modifier: result.modifier,
+  shots: result.shots.map((shot, index) => ({
+    shot: index + 1,
+    result: shot.finalResult,
+  })),
+  wildResult:
+    result.wildResult.total + result.modifier,
+  raises: result.raiseCount,
+})
 }}
     >
       🔥 RZUĆ SERIĘ ×{burstSize}
