@@ -2888,26 +2888,50 @@ addRollToHistory({
     </div>
 
     <div className="reroll-choice-buttons">
-      <button
-        className="keep-old-button"
-        type="button"
-        onClick={() => {
-          setBurstRerollResult(null)
-        }}
-      >
-        ← ZOSTAW {burstResult.successCount}
-      </button>
+     <button
+  className="keep-old-button"
+  type="button"
+  onClick={() => {
+    addRollToHistory({
+  type: 'burst-reroll',
+  character: characterSheet.name,
+  name: `🟡 Fuks — ${selectedRoll.weaponName} — SERIA ×${burstSize}`,
+  die: selectedRoll.die,
+  result: burstResult.successCount,
+  outcome: `${burstResult.successCount} TRAFIENIA`,
+  oldResult: burstResult.successCount,
+  newResult: burstRerollResult.successCount,
+  chosenResult: burstResult.successCount,
+})
 
-      <button
-        className="keep-new-button"
-        type="button"
-        onClick={() => {
-          setBurstResult(burstRerollResult)
-          setBurstRerollResult(null)
-        }}
-      >
-        WYBIERZ {burstRerollResult.successCount} →
-      </button>
+    setBurstRerollResult(null)
+  }}
+>
+  ← ZOSTAW {burstResult.successCount}
+</button>
+
+     <button
+  className="keep-new-button"
+  type="button"
+  onClick={() => {
+   addRollToHistory({
+  type: 'burst-reroll',
+  character: characterSheet.name,
+  name: `🟡 Fuks — ${selectedRoll.weaponName} — SERIA ×${burstSize}`,
+  die: selectedRoll.die,
+  result: burstRerollResult.successCount,
+  outcome: `${burstRerollResult.successCount} TRAFIENIA`,
+  oldResult: burstResult.successCount,
+  newResult: burstRerollResult.successCount,
+  chosenResult: burstRerollResult.successCount,
+})
+
+    setBurstResult(burstRerollResult)
+    setBurstRerollResult(null)
+  }}
+>
+  WYBIERZ {burstRerollResult.successCount} →
+</button>
     </div>
   </div>
 )}
