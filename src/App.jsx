@@ -731,6 +731,9 @@ const [characterSheet, setCharacterSheet] = useState(() => {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('card')
   const [selectedRoll, setSelectedRoll] = useState(null)
+  const [burstSize, setBurstSize] = useState(null)
+  const [burstResult, setBurstResult] = useState(null)
+  const [burstRerollResult, setBurstRerollResult] = useState(null)
   const [rollModifier, setRollModifier] = useState(0)
   const [rollResult, setRollResult] = useState(null)
   const [rerollResult, setRerollResult] = useState(null)
@@ -796,6 +799,7 @@ const [gmNotes, setGmNotes] = useState('')
 
 const [npcs, setNpcs] = useState([])
 const [selectedNpc, setSelectedNpc] = useState(null)
+const [editingNpc, setEditingNpc] = useState(null)
 
 const [isCharacterLoaded, setIsCharacterLoaded] = useState(false)
 
@@ -1418,6 +1422,76 @@ function performRoll() {
     modifier: rollModifier,
     finalResult,
   }
+}
+
+function getBurstAmmoCost(rateOfFire) {
+  const ammoCosts = {
+    1: 1,
+    2: 5,
+    3: 10,
+    4: 20,
+    5: 40,
+    6: 50,
+  }
+
+  return ammoCosts[rateOfFire] ?? 0
+}
+
+function performBurstRoll(rateOfFire) {
+  if (!selectedRoll) return
+
+  const shots = []
+
+  for (let i = 0; i < rateOfFire; i++) {
+    const result = rollExplodingDie(selectedRoll.die)
+
+    shots.push({
+      ...result,
+      finalResult: result.total + rollModifier,
+    })
+  }
+
+  const wildResult = rollExplodingDie('d6')
+
+  const allResults = [
+    ...shots,
+    {
+      ...wildResult,
+      finalResult: wildResult.total + rollModifier,
+      isWild: true,
+    },
+  ]
+
+  // Zostawiamy dokładnie tyle wyników,
+  // ile wynosi RoF. Dzika może zastąpić jeden z nich.
+  const chosenResults = [...allResults]
+    .sort((a, b) => b.finalResult - a.finalResult)
+    .slice(0, rateOfFire)
+
+  const successCount = chosenResults.filter(
+    (result) => result.finalResult >= 4
+  ).length
+
+  const raiseCount = chosenResults.filter(
+    (result) => result.finalResult >= 8
+  ).length
+
+  return {
+    shots,
+    wildResult,
+    chosenResults,
+    successCount,
+    raiseCount,
+    modifier: rollModifier,
+  }
+}
+
+function rerollBurst() {
+  if (!burstSize) return
+
+  const result = performBurstRoll(burstSize)
+
+  setBurstRerollResult(result)
 }
 
 function performSoakRoll() {
@@ -2136,31 +2210,54 @@ function renderCard() {
   </div>
 )}
 
-      {item.damage && (
-      <button
-  className="damage-button"
-  onClick={() => {
-    const result = rollDamageDice(item.damage)
+{item.damage && (
+  <>
+    <button
+      className="roll-button"
+      onClick={() => {
+        const shootingSkill = characterSheet.skills.find(
+          (skill) => skill.name === 'Strzelanie'
+        )
 
-    setDamageResult({
-      ...result,
-      weaponName: item.name,
-    })
+        if (!shootingSkill) {
+          alert('Postać nie ma umiejętności Strzelanie')
+          return
+        }
 
-    addRollToHistory({
-  type: 'damage',
-  character: characterSheet.name,
-  name: `💥 ${item.name}`,
-  die: item.damage,
-  result: result.total,
-  outcome: 'OBRAŻENIA',
-  pp: item.ap ?? 0,
+        setSelectedRoll({
+  ...shootingSkill,
+  weaponName: item.name,
+  rateOfFire: item.rateOfFire ?? 1,
 })
-  }}
->
-  💥 RZUĆ OBRAŻENIA
-</button>
-)}  
+      }}
+    >
+      🔫 STRZAŁ
+    </button>
+
+    <button
+      className="damage-button"
+      onClick={() => {
+        const result = rollDamageDice(item.damage)
+        setDamageResult({
+          ...result,
+          weaponName: item.name,
+        })
+        addRollToHistory({
+          type: 'damage',
+          character: characterSheet.name,
+          name: `💥 ${item.name}`,
+          die: item.damage,
+          result: result.total,
+          outcome: 'OBRAŻENIA',
+          pp: item.ap ?? 0,
+        })
+      }}
+    >
+      💥 RZUĆ OBRAŻENIA
+    </button>
+  </>
+)}
+
 
       </div>
     ))}
@@ -2556,15 +2653,248 @@ if (activeTab === 'initiative') {
     <div className="roll-modal">
       <h2>🎲 {selectedRoll.name}</h2>
 
-      <p>
-        Kość: <strong>{selectedRoll.die}</strong>
-      </p>
+      {selectedRoll.weaponName &&
+  selectedRoll.rateOfFire > 1 &&
+  !rollResult && 
+  !burstResult && (
+    <div className="burst-controls">
+      <h3>🔥 WYBIERZ DŁUGOŚĆ SERII</h3>
 
-      <p>
-        Wild Die: <strong>d6</strong>
-      </p>
+      <div className="burst-buttons">
+        {Array.from(
+          { length: selectedRoll.rateOfFire - 1 },
+          (_, index) => index + 2
+        ).map((burstSize) => {
+          const ammoCost = getBurstAmmoCost(burstSize)
 
-      {!rollResult && (
+          return (
+            <button
+              key={burstSize}
+              type="button"
+              className="roll-button"
+              disabled={ammoCost > characterSheet.equipment.find(
+                (item) =>
+                  item.name === selectedRoll.weaponName
+              )?.ammo}
+           onClick={() => {
+  setBurstSize(burstSize)
+  setBurstResult(null)
+}}
+            >
+              🔥 ×{burstSize}
+              <br />
+              <small>
+                {ammoCost} pocisków
+              </small>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )}
+
+{burstSize && !burstResult && (
+  <div className="burst-roll-controls">
+    <h3>🔥 SERIA ×{burstSize}</h3>
+
+    <p>
+      Zużycie amunicji:{' '}
+      <strong>{getBurstAmmoCost(burstSize)}</strong>
+    </p>
+
+    <div className="modifier-control">
+      <label htmlFor="burst-modifier">
+        Modyfikator
+      </label>
+
+      <input
+        id="burst-modifier"
+        type="number"
+        value={rollModifier}
+        onChange={(event) =>
+          setRollModifier(Number(event.target.value))
+        }
+      />
+    </div>
+
+    <button
+      type="button"
+      className="roll-button"
+      onClick={() => {
+  const ammoCost = getBurstAmmoCost(burstSize)
+
+  const weaponIndex = characterSheet.equipment.findIndex(
+    (item) => item.name === selectedRoll.weaponName
+  )
+
+  if (weaponIndex === -1) {
+    alert('Nie znaleziono broni')
+    return
+  }
+
+  const weapon = characterSheet.equipment[weaponIndex]
+
+  if ((weapon.ammo ?? 0) < ammoCost) {
+    alert('Za mało amunicji')
+    return
+  }
+
+  const result = performBurstRoll(burstSize)
+
+  const updatedEquipment = characterSheet.equipment.map(
+    (item, index) =>
+      index === weaponIndex
+        ? {
+            ...item,
+            ammo: item.ammo - ammoCost,
+          }
+        : item
+  )
+
+  const updatedCharacter = {
+    ...characterSheet,
+    equipment: updatedEquipment,
+  }
+
+  setCharacterSheet(updatedCharacter)
+
+  localStorage.setItem(
+    getCharacterStorageKey(characterSheet.storageName),
+    JSON.stringify(updatedCharacter)
+  )
+
+  setBurstResult(result)
+}}
+    >
+      🔥 RZUĆ SERIĘ ×{burstSize}
+    </button>
+  </div>
+)}
+
+
+{!burstResult && (
+  <>
+    <p>
+      Kość: <strong>{selectedRoll.die}</strong>
+    </p>
+
+    <p>
+      Wild Die: <strong>d6</strong>
+    </p>
+  </>
+)}
+
+{burstResult && (
+  <div className="roll-result">
+    <div className="roll-result-card">
+      <div className="result-card-header">
+        🔥 SERIA ×{burstSize}
+      </div>
+
+      <div className="result-rows">
+        {burstResult.shots.map((shot, index) => (
+          <p key={index}>
+            <span>🎲 Strzał {index + 1}</span>
+            <strong>
+              {shot.rolls.join(' + ')}
+              {' = '}
+              {shot.finalResult}
+            </strong>
+          </p>
+        ))}
+
+        <p>
+          <span>🃏 Wild Die</span>
+          <strong>
+            {burstResult.wildResult.rolls.join(' + ')}
+            {' = '}
+            {burstResult.wildResult.total +
+              burstResult.modifier}
+          </strong>
+        </p>
+
+        <p>
+          <span>🎯 Trafienia</span>
+          <strong>{burstResult.successCount}</strong>
+        </p>
+
+        <p>
+          <span>🏆 Podbicia</span>
+          <strong>{burstResult.raiseCount}</strong>
+        </p>
+      </div>
+
+      <div className="final-result-box">
+        <span>TRAFIENIA W SERII</span>
+        <strong>{burstResult.successCount}</strong>
+      </div>
+    </div>
+  </div>
+)}
+
+{burstResult &&
+  !burstRerollResult &&
+  characterSheet.status.bennies > 0 && (
+    <button
+      type="button"
+      className="reroll-button"
+      onClick={() => {
+        changeStatusValue('bennies', 'maxBennies', -1)
+        rerollBurst()
+      }}
+    >
+      🟡 WYDAJ FUKSA – PRZERZUĆ SERIĘ
+    </button>
+  )}
+
+  {burstRerollResult && (
+  <div className="reroll-result reroll-result-card">
+    <div className="result-card-header reroll-header">
+      🟡 PRZERZUT SERII
+    </div>
+
+    <div className="reroll-compact-results">
+      <div className="reroll-compare-row">
+        <span>🔥 STARA SERIA</span>
+        <strong>
+          {burstResult.successCount}
+        </strong>
+      </div>
+
+      <div className="reroll-compare-row">
+        <span>🟡 NOWA SERIA</span>
+        <strong>
+          {burstRerollResult.successCount}
+        </strong>
+      </div>
+    </div>
+
+    <div className="reroll-choice-buttons">
+      <button
+        className="keep-old-button"
+        type="button"
+        onClick={() => {
+          setBurstRerollResult(null)
+        }}
+      >
+        ← ZOSTAW {burstResult.successCount}
+      </button>
+
+      <button
+        className="keep-new-button"
+        type="button"
+        onClick={() => {
+          setBurstResult(burstRerollResult)
+          setBurstRerollResult(null)
+        }}
+      >
+        WYBIERZ {burstRerollResult.successCount} →
+      </button>
+    </div>
+  </div>
+)}
+
+      {!rollResult && !burstSize && (
   <>
     <div className="modifier-control">
 
@@ -2592,6 +2922,8 @@ if (activeTab === 'initiative') {
           setRerollResult(null)
           setChosenFinalResult(null)
           setRollResult(result)
+          setBurstSize(null)
+          setBurstResult(null)
 
         addRollToHistory({
           type: 'test',
@@ -2753,6 +3085,9 @@ if (activeTab === 'initiative') {
           setRollModifier(0)
           setRollResult(null)
           setChosenFinalResult(null)
+          setBurstSize(null)
+          setBurstResult(null)
+          setBurstRerollResult(null)
 }}
       >
         ZAMKNIJ
@@ -4435,14 +4770,20 @@ setGmSelectedCharacter(updatedCharacter)
   </section>
 )}
 
-{gmActiveTab === 'npcs' && selectedNpc === 'new' && (
+{gmActiveTab === 'npcs' &&
+  (selectedNpc === 'new' || editingNpc) && (
   <section className="tab-content">
 
-    <h2>➕ NOWY NPC</h2>
+    <h2>
+  {editingNpc ? '✏️ EDYCJA NPC' : '➕ NOWY NPC'}
+</h2>
 
     <button
       className="logout-button"
-      onClick={() => setSelectedNpc(null)}
+      onClick={() => {
+  setEditingNpc(null)
+  setSelectedNpc(null)
+}}
     >
       ← WRÓĆ DO LISTY
     </button>
@@ -4901,13 +5242,33 @@ selectedNpc.attacks.length > 0 ? (
     }
 
     try {
-      await addDoc(
-        collection(db, 'npcs'),
-        {
-          ...npcForm,
-          createdAt: Date.now(),
-        }
-      )
+      if (editingNpc) {
+  await updateDoc(
+    doc(db, 'npcs', editingNpc.id),
+    {
+      ...npcForm,
+      updatedAt: Date.now(),
+    }
+  )
+
+  console.log(
+    'NPC ZAKTUALIZOWANY:',
+    npcForm.name
+  )
+} else {
+  await addDoc(
+    collection(db, 'npcs'),
+    {
+      ...npcForm,
+      createdAt: Date.now(),
+    }
+  )
+
+  console.log(
+    'NPC UTWORZONY:',
+    npcForm.name
+  )
+}
 
       setNpcForm({
         name: '',
@@ -4934,6 +5295,7 @@ selectedNpc.attacks.length > 0 ? (
         notes: '',
       })
 
+      setEditingNpc(null)
       setSelectedNpc(null)
 
     } catch (error) {
@@ -4944,7 +5306,7 @@ selectedNpc.attacks.length > 0 ? (
     }
   }}
 >
-  💾 ZAPISZ NPC
+  {editingNpc ? '💾 ZAPISZ ZMIANY' : '💾 ZAPISZ NPC'}
 </button>
 
     </div>
@@ -4955,7 +5317,8 @@ selectedNpc.attacks.length > 0 ? (
 
 {gmActiveTab === 'npcs' &&
   selectedNpc &&
-  selectedNpc !== 'new' && (
+  selectedNpc !== 'new' && 
+    !editingNpc && (
     <section className="tab-content">
 
       <button
@@ -4966,6 +5329,34 @@ selectedNpc.attacks.length > 0 ? (
       </button>
 
       <h2>👤 {selectedNpc.name}</h2>
+      <button
+  className="roll-button"
+  onClick={() => {
+    setEditingNpc(selectedNpc)
+    setNpcForm({
+      name: selectedNpc.name,
+      type: selectedNpc.type,
+      agility: selectedNpc.agility,
+      smarts: selectedNpc.smarts,
+      spirit: selectedNpc.spirit,
+      strength: selectedNpc.strength,
+      vigor: selectedNpc.vigor,
+      fighting: selectedNpc.fighting,
+      shooting: selectedNpc.shooting,
+      athletics: selectedNpc.athletics,
+      stealth: selectedNpc.stealth,
+      notice: selectedNpc.notice,
+      pace: selectedNpc.pace,
+      defense: selectedNpc.defense,
+      toughness: selectedNpc.toughness,
+      attacks: selectedNpc.attacks || [],
+      notes: selectedNpc.notes || '',
+    })
+   
+  }}
+>
+  ✏️ EDYTUJ NPC
+</button>
 
       <p>
         {selectedNpc.type === 'wildcard'
