@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
+
+
 import hammerPortrait from './assets/Hammer.png'
 import żmijewskiPortrait from './assets/Żmijewski.png'
 import kalePortrait from './assets/Kale_Iona.png'
 import mason from './assets/mason.jpg'
 import rook from './assets/rook.png'
 import alienBackground from './assets/savage-table-bg.jpg'
+
+
 
 import {
   ref,
@@ -64,17 +68,36 @@ function getCharacterStorageKey(characterName) {
 }
 
 
+async function saveCharacterToFirestore(character) {
+  try {
+    await setDoc(
+      doc(db, 'characters', character.storageName),
+      character
+    )
+
+    console.log(
+      'POSTAĆ ZAPISANA W FIRESTORE:',
+      character.name
+    )
+  } catch (error) {
+    console.error(
+      'Błąd zapisu postaci do Firestore:',
+      error
+    )
+  }
+}
+
 function App() {
 
   const characters = [
-  { name: 'Hammer', storageName: 'Hammer', pin: '1234' },
-  { name: 'Żmijewski', storageName: 'Żmijewski', pin: '5678' },
-  { name: 'Kale', storageName: 'Kale', pin: '0000' },
-  { name: 'Mason', storageName: 'Mason', pin: '0000' },
-  { name: 'Rook', storageName: 'Rook', pin: '1111' },
+  { name: 'Hammer', storageName: 'Hammer', pin: '2642' },
+  { name: 'Żmijewski', storageName: 'Żmijewski', pin: '7319' },
+  { name: 'Kale', storageName: 'Kale', pin: '4826' },
+  { name: 'Mason', storageName: 'Mason', pin: '5937' },
+  { name: 'Rook', storageName: 'Rook', pin: '8164' },
 ]
 
-  const gmPin = '9999'
+  const gmPin = '4269'
 
  function createDefaultCharacterSheet(characterName) {
 
@@ -1059,10 +1082,33 @@ useEffect(() => {
     selectedCharacter.name
   )
 
+  // Lokalna kopia — zostawiamy jako zabezpieczenie
   localStorage.setItem(
     storageKey,
     JSON.stringify(characterSheet)
   )
+
+  // Wspólna kopia — Firestore
+  const saveCharacterToFirestore = async () => {
+    try {
+      await setDoc(
+        doc(db, 'characters', selectedCharacter.storageName),
+        characterSheet
+      )
+
+      console.log(
+        'POSTAĆ ZAPISANA W FIRESTORE:',
+        characterSheet.name
+      )
+    } catch (error) {
+      console.error(
+        'Błąd podczas zapisywania postaci w Firestore:',
+        error
+      )
+    }
+  }
+
+  saveCharacterToFirestore()
 }, [
   characterSheet,
   selectedCharacter,
@@ -1491,52 +1537,95 @@ if (savedCharacterSheet) {
 }
 
 
-  function loginCharacter() {
-
+async function loginCharacter() {
   if (pin !== selectedCharacter.pin) {
-
     setError('Nieprawidłowy PIN')
-
     return
-
   }
 
   const characterName = selectedCharacter.name
-
   const storageKey = getCharacterStorageKey(characterName)
 
-  const savedCharacterSheet = localStorage.getItem(storageKey)
+  const defaultCharacterSheet =
+    createDefaultCharacterSheet(characterName)
 
-const defaultCharacterSheet =
-  createDefaultCharacterSheet(characterName)
+  try {
+    const characterDoc = await getDoc(
+      doc(db, 'characters', selectedCharacter.storageName)
+    )
 
-if (savedCharacterSheet) {
-  const savedSheet = JSON.parse(savedCharacterSheet)
+    if (characterDoc.exists()) {
+      const savedSheet = characterDoc.data()
 
-  setCharacterSheet({
-  ...defaultCharacterSheet,
-  ...savedSheet,
-  portrait: defaultCharacterSheet.portrait,
-})
-} else {
-  localStorage.setItem(
-    storageKey,
-    JSON.stringify(defaultCharacterSheet)
-  )
+      setCharacterSheet({
+        ...defaultCharacterSheet,
+        ...savedSheet,
+        portrait: defaultCharacterSheet.portrait,
+      })
 
-  setCharacterSheet(defaultCharacterSheet)
-}
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          ...defaultCharacterSheet,
+          ...savedSheet,
+          portrait: defaultCharacterSheet.portrait,
+        })
+      )
+    } else {
+      const savedCharacterSheet =
+        localStorage.getItem(storageKey)
+
+      if (savedCharacterSheet) {
+        const savedSheet = JSON.parse(savedCharacterSheet)
+
+        setCharacterSheet({
+          ...defaultCharacterSheet,
+          ...savedSheet,
+          portrait: defaultCharacterSheet.portrait,
+        })
+      } else {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(defaultCharacterSheet)
+        )
+
+        setCharacterSheet(defaultCharacterSheet)
+      }
+    }
+  } catch (error) {
+    console.error(
+      'Błąd podczas wczytywania postaci z Firestore:',
+      error
+    )
+
+    const savedCharacterSheet =
+      localStorage.getItem(storageKey)
+
+    if (savedCharacterSheet) {
+      const savedSheet = JSON.parse(savedCharacterSheet)
+
+      setCharacterSheet({
+        ...defaultCharacterSheet,
+        ...savedSheet,
+        portrait: defaultCharacterSheet.portrait,
+      })
+    } else {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify(defaultCharacterSheet)
+      )
+
+      setCharacterSheet(defaultCharacterSheet)
+    }
+  }
 
   setIsCharacterLoaded(true)
-
   setNewLootName('')
   setNewLootDescription('')
   setEditingLootIndex(null)
   setShowLootForm(false)
-
   setActiveCharacterName(characterName)
   setActiveTab('card')
-
 }
 
 function goBack() {
@@ -3008,7 +3097,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const newBennies = Math.max(
         0,
         (status?.bennies ?? 0) - 1
@@ -3026,6 +3115,8 @@ if (isGmLoggedIn) {
         getCharacterStorageKey(character.storageName),
         JSON.stringify(updatedCharacter)
       )
+
+      await saveCharacterToFirestore(updatedCharacter)
       
       setGmRefresh((current) => current + 1)
 
@@ -3041,7 +3132,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const maxBennies = status?.maxBennies ?? 3
 
       const newBennies = Math.min(
@@ -3062,6 +3153,8 @@ if (isGmLoggedIn) {
         JSON.stringify(updatedCharacter)
       )
 
+      await saveCharacterToFirestore(updatedCharacter)
+
       setGmRefresh((current) => current + 1)
       
     }}
@@ -3076,7 +3169,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const newWounds = Math.max(
         0,
         (status?.wounds ?? 0) - 1
@@ -3095,6 +3188,8 @@ if (isGmLoggedIn) {
         JSON.stringify(updatedCharacter)
       )
 
+      await saveCharacterToFirestore(updatedCharacter)
+
       setGmRefresh((current) => current + 1)
     }}
   >
@@ -3108,7 +3203,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const maxWounds = status?.maxWounds ?? 3
 
       const newWounds = Math.min(
@@ -3129,6 +3224,8 @@ if (isGmLoggedIn) {
         JSON.stringify(updatedCharacter)
       )
 
+      await saveCharacterToFirestore(updatedCharacter)
+
       setGmRefresh((current) => current + 1)
     }}
   >
@@ -3142,7 +3239,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const newFatigue = Math.max(
         0,
         (status?.fatigue ?? 0) - 1
@@ -3161,6 +3258,8 @@ if (isGmLoggedIn) {
         JSON.stringify(updatedCharacter)
       )
 
+      await saveCharacterToFirestore(updatedCharacter)
+
       setGmRefresh((current) => current + 1)
     }}
   >
@@ -3174,7 +3273,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const maxFatigue = status?.maxFatigue ?? 2
 
       const newFatigue = Math.min(
@@ -3195,6 +3294,8 @@ if (isGmLoggedIn) {
         JSON.stringify(updatedCharacter)
       )
 
+      await saveCharacterToFirestore(updatedCharacter)
+
       setGmRefresh((current) => current + 1)
     }}
   >
@@ -3212,7 +3313,7 @@ if (isGmLoggedIn) {
   <button
     type="button"
     className="back-button"
-    onClick={() => {
+    onClick={async () => {
       const updatedCharacter = {
         ...character,
         status: {
@@ -3225,6 +3326,8 @@ if (isGmLoggedIn) {
         getCharacterStorageKey(character.storageName),
         JSON.stringify(updatedCharacter)
       )
+
+      await saveCharacterToFirestore(updatedCharacter)
 
       setGmRefresh((current) => current + 1)
     }}
@@ -3941,7 +4044,7 @@ setGmEditStatus(
 
     <button
   className="login-button"
-  onClick={() => {
+  onClick={async () => {
     const updatedCharacter = {
       ...gmSelectedCharacter,
       name: gmEditName,
@@ -3964,12 +4067,32 @@ setGmEditStatus(
 )
 
     localStorage.setItem(
-      storageKey,
-      JSON.stringify(updatedCharacter)
-    )
+  storageKey,
+  JSON.stringify(updatedCharacter)
+)
 
-    setGmSelectedCharacter(updatedCharacter)
+try {
+  await setDoc(
+    doc(
+      db,
+      'characters',
+      gmSelectedCharacter.storageName
+    ),
+    updatedCharacter
+  )
 
+  console.log(
+    'MG ZAPISAŁ POSTAĆ W FIRESTORE:',
+    updatedCharacter.name
+  )
+} catch (error) {
+  console.error(
+    'Błąd zapisu postaci MG do Firestore:',
+    error
+  )
+}
+
+setGmSelectedCharacter(updatedCharacter)
     setIsGmEditingCharacter(false)
 
     console.log(
