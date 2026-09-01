@@ -1503,21 +1503,28 @@ button {
   border: 1px solid #555;
 }
 
-.npc-attacks-section>h3 {
-  margin-top: 0;
-  text-align: center;
-}
-
 .npc-attack-card {
   margin: 12px auto;
-  max-width: 500px;
+  max-width: 900px;
+  padding: 14px 18px;
+  box-sizing: border-box;
+}
+
+.npc-attack-card>strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.npc-attack-card>p {
+  margin: 4px 0;
 }
 
 .npc-damage-button {
   display: block;
   width: auto;
-  min-width: 220px;
-  margin: 15px auto 5px;
+  min-width: 180px;
+  margin: 12px auto 2px;
 }
 
 /* =========================
@@ -1604,7 +1611,7 @@ button {
 ========================= */
 
 .npc-info-section {
-  max-width: 700px;
+  max-width: 1000px;
   margin: 20px auto;
   padding: 16px;
   border: 1px solid #555;
@@ -3043,4 +3050,84 @@ button {
   color: #e05b5b;
 
   box-shadow: 0 0 10px rgba(224, 91, 91, 0.10);
+}
+
+/* =========================
+   INICJATYWA - USUŃ KARTĘ
+========================= */
+
+.initiative-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  width: auto;
+  min-width: 90px;
+  min-height: 42px;
+  padding: 8px 14px;
+
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+/* =========================
+   GRUPY NPC
+========================= */
+
+.npc-groups {
+  width: 100%;
+}
+
+.npc-group {
+  margin: 28px 0;
+}
+
+.npc-group-title {
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #555;
+  text-align: center;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+
+.npc-group-wildcards .npc-group-title {
+  border-bottom-color: #aaa;
+}
+
+.npc-group-extras .npc-group-title {
+  border-bottom-color: #555;
+}
+
+/* Wild Card - wyraźniejsze kafelki */
+.npc-group-wildcards .npc-selector-card {
+  border-width: 2px;
+}
+
+.npc-group-wildcards .npc-selector-card strong {
+  font-size: 1rem;
+}
+
+.npc-group-wildcards .npc-selector-card p {
+  font-weight: bold;
+}
+
+/* Extra - spokojniejsze wizualnie */
+.npc-group-extras .npc-selector-card {
+  opacity: 0.85;
+}
+
+/* Badge Wild Card */
+
+.npc-wildcard-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
 }

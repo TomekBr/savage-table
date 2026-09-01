@@ -1175,41 +1175,93 @@ if (npc.type === 'wildcard') {
 
 async function rollNpcDamage(npc, attack) {
   const damageText = attack.damage.trim()
-
-  const diceMatch = damageText.match(/^(\d+)d(\d+)$/i)
-
-  if (!diceMatch) {
-    alert(
-      `Nieprawidłowy zapis obrażeń: ${damageText}`
-    )
-    return
-  }
-
-  const numberOfDice = Number(diceMatch[1])
-  const dieSize = Number(diceMatch[2])
-
   const diceResults = []
+  let totalDamage = 0
 
-  for (let index = 0; index < numberOfDice; index++) {
-    const rollResult = rollExplodingDie(`d${dieSize}`)
+  // Obrażenia oparte na Sile, np. strength+d6
+  if (damageText.toLowerCase().startsWith('strength+')) {
+    const weaponDie = damageText
+      .replace(/^strength\+/i, '')
+      .trim()
 
-    diceResults.push(rollResult)
+    if (!/^d\d+$/i.test(weaponDie)) {
+      alert(
+        `Nieprawidłowy zapis obrażeń: ${damageText}`
+      )
+      return
+    }
+
+    // Kość Siły NPC
+    const strengthResult = rollExplodingDie(
+      npc.strength
+    )
+
+    // Kość broni
+    const weaponResult = rollExplodingDie(
+      weaponDie
+    )
+
+    diceResults.push({
+      label: `Siła ${npc.strength}`,
+      ...strengthResult,
+    })
+
+    diceResults.push({
+      label: `Broń ${weaponDie}`,
+      ...weaponResult,
+    })
+
+    totalDamage =
+      strengthResult.total +
+      weaponResult.total
   }
 
-  const totalDamage = diceResults.reduce(
-    (sum, result) => sum + result.total,
-    0
-  )
+  // Zwykłe obrażenia, np. 2d6, 2d8, 1d10
+  else {
+    const diceMatch =
+      damageText.match(/^(\d+)d(\d+)$/i)
+
+    if (!diceMatch) {
+      alert(
+        `Nieprawidłowy zapis obrażeń: ${damageText}`
+      )
+      return
+    }
+
+    const numberOfDice = Number(diceMatch[1])
+    const dieSize = Number(diceMatch[2])
+
+    for (
+      let index = 0;
+      index < numberOfDice;
+      index++
+    ) {
+      const rollResult = rollExplodingDie(
+        `d${dieSize}`
+      )
+
+      diceResults.push({
+        label: `Kość ${index + 1}`,
+        ...rollResult,
+      })
+
+      totalDamage += rollResult.total
+    }
+  }
 
   const newRoll = {
-    name: npc.name,
-    type: 'damage',
-    label: `💥 ${attack.name} — obrażenia`,
-    dice: attack.damage,
-    results: diceResults.map((result) => result.total),
-    result: totalDamage,
-    pp: attack.pp ?? 0,
-  }
+  character: npc.name,
+  name: npc.name,
+  type: 'damage',
+  label: `💥 ${attack.name} — obrażenia`,
+  dice: attack.damage,
+  diceResults,
+  results: diceResults.map(
+    (result) => result.total
+  ),
+  result: totalDamage,
+  pp: attack.pp ?? 0,
+}
 
   await addRollToHistory(newRoll)
 }
@@ -2348,32 +2400,56 @@ function renderCard() {
     </strong>
 
     <span className="roll-type">
-      {roll.outcome}
-    </span>
+  {roll.outcome || 'OBRAŻENIA'}
+</span>
 
   </div>
 
   <h3 className="roll-name">
-    {roll.name}
-  </h3>
+  {roll.label || roll.name}
+</h3>
 
-  <div className="roll-details">
+ <div className="roll-details">
 
-    <span>
-      🎲 Kość: <strong>{roll.die}</strong>
-    </span>
+  {roll.diceResults ? (
+    <>
+      {roll.diceResults.map((dice, index) => (
+        <span key={index}>
+          🎲 <strong>{dice.label}</strong>:{' '}
+          <strong>
+            {dice.rolls.join(' + ')}
+            {' = '}
+            {dice.total}
+          </strong>
+        </span>
+      ))}
 
-    <span>
-      🎯 Wynik: <strong>{roll.result}</strong>
-    </span>
-
-    {roll.pp !== undefined && (
       <span>
-        🛡️ PP: <strong>{roll.pp}</strong>
+        💥 OBRAŻENIA:{' '}
+        <strong>{roll.result}</strong>
       </span>
-    )}
+    </>
+  ) : (
+    <>
+      <span>
+        🎲 Kość:{' '}
+        <strong>{roll.die || roll.dice}</strong>
+      </span>
 
-  </div>
+      <span>
+        🎯 Wynik:{' '}
+        <strong>{roll.result}</strong>
+      </span>
+    </>
+  )}
+
+  {roll.pp !== undefined && (
+    <span>
+      🛡️ PP: <strong>{roll.pp}</strong>
+    </span>
+  )}
+
+</div>
 
 </div>
       ))}
@@ -4698,27 +4774,51 @@ setGmSelectedCharacter(updatedCharacter)
 
       </div>
 
-      <h3 className="roll-name">
-        {roll.name}
-      </h3>
+    <h3 className="roll-name">
+  {roll.label || roll.name}
+</h3>
 
-      <div className="roll-details">
+<div className="roll-details">
 
-        <span>
-          🎲 Kość: <strong>{roll.die}</strong>
+  {roll.diceResults ? (
+    <>
+      {roll.diceResults.map((dice, index) => (
+        <span key={index}>
+          🎲 <strong>{dice.label}</strong>:{' '}
+          <strong>
+            {dice.rolls.join(' + ')}
+            {' = '}
+            {dice.total}
+          </strong>
         </span>
+      ))}
 
-        <span>
-          🎯 Wynik: <strong>{roll.result}</strong>
-        </span>
+      <span>
+        💥 OBRAŻENIA:{' '}
+        <strong>{roll.result}</strong>
+      </span>
+    </>
+  ) : (
+    <>
+      <span>
+        🎲 Kość:{' '}
+        <strong>{roll.die || roll.dice}</strong>
+      </span>
 
-        {roll.pp !== undefined && (
-          <span>
-            🛡️ PP: <strong>{roll.pp}</strong>
-          </span>
-        )}
+      <span>
+        🎯 Wynik:{' '}
+        <strong>{roll.result}</strong>
+      </span>
+    </>
+  )}
 
-      </div>
+  {roll.pp !== undefined && (
+    <span>
+      🛡️ PP: <strong>{roll.pp}</strong>
+    </span>
+  )}
+
+</div>
 
       {isGmLoggedIn && (
         <button
@@ -4777,7 +4877,39 @@ setGmSelectedCharacter(updatedCharacter)
 
 <button
   className="roll-button npc-add-button"
-      onClick={() => setSelectedNpc('new')}
+      onClick={() => {
+  setNpcForm({
+    name: '',
+    type: 'extra',
+
+    agility: 'd6',
+    smarts: 'd6',
+    spirit: 'd6',
+    strength: 'd6',
+    vigor: 'd6',
+
+    fighting: 'd6',
+    shooting: 'd6',
+    athletics: 'd6',
+    stealth: 'd6',
+    notice: 'd6',
+
+    pace: 6,
+    defense: 5,
+    toughness: 5,
+
+    attacks: [],
+
+    notes: '',
+  })
+
+  setNpcAttackName('')
+  setNpcAttackDamage('')
+  setNpcAttackPP(0)
+
+  setEditingNpc(null)
+  setSelectedNpc('new')
+}}
     >
       ➕ DODAJ NPC
     </button>
@@ -4787,26 +4919,47 @@ setGmSelectedCharacter(updatedCharacter)
         Brak NPC. Dodaj pierwszego NPC.
       </p>
     ) : (
-      <div className="npc-list npc-selector-list">
-        {npcs.map((npc) => (
+      <div className="npc-groups">
+
+  <div className="npc-group npc-group-wildcards">
+    <h3 className="npc-group-title">⭐ WILD CARDS</h3>
+
+    <div className="npc-list npc-selector-list">
+      {npcs
+        .filter((npc) => npc.type === 'wildcard')
+        .map((npc) => (
           <button
-  key={npc.id}
-  className={`history-card npc-selector-card ${
-    npc.type === 'wildcard'
-      ? 'npc-wildcard'
-      : 'npc-extra'
-  }`}
+            key={npc.id}
+            className="history-card npc-selector-card npc-wildcard"
             onClick={() => setSelectedNpc(npc)}
           >
             <strong>{npc.name}</strong>
-            <p>
-              {npc.type === 'wildcard'
-                ? '⭐ Wild Card'
-                : '👤 Extra'}
-            </p>
+            <span className="npc-wildcard-badge">⭐ WILD CARD</span>
           </button>
         ))}
-      </div>
+    </div>
+  </div>
+
+  <div className="npc-group npc-group-extras">
+    <h3 className="npc-group-title">👤 EXTRAS</h3>
+
+    <div className="npc-list npc-selector-list">
+      {npcs
+        .filter((npc) => npc.type !== 'wildcard')
+        .map((npc) => (
+          <button
+            key={npc.id}
+            className="history-card npc-selector-card npc-extra"
+            onClick={() => setSelectedNpc(npc)}
+          >
+            <strong>{npc.name}</strong>
+            <p>👤 Extra</p>
+          </button>
+        ))}
+    </div>
+  </div>
+
+</div>
     )}
 
   </section>
@@ -5284,13 +5437,26 @@ selectedNpc.attacks.length > 0 ? (
     }
 
     try {
+      const attacksToSave = [...npcForm.attacks]
+
+if (
+  npcAttackName.trim() &&
+  npcAttackDamage.trim()
+) {
+  attacksToSave.push({
+    name: npcAttackName.trim(),
+    damage: npcAttackDamage.trim(),
+    pp: npcAttackPP,
+  })
+}
       if (editingNpc) {
   await updateDoc(
     doc(db, 'npcs', editingNpc.id),
     {
-      ...npcForm,
-      updatedAt: Date.now(),
-    }
+  ...npcForm,
+  attacks: attacksToSave,
+  updatedAt: Date.now(),
+}
   )
 
   console.log(
@@ -5301,9 +5467,10 @@ selectedNpc.attacks.length > 0 ? (
   await addDoc(
     collection(db, 'npcs'),
     {
-      ...npcForm,
-      createdAt: Date.now(),
-    }
+  ...npcForm,
+  attacks: attacksToSave,
+  createdAt: Date.now(),
+}
   )
 
   console.log(
@@ -5420,9 +5587,16 @@ selectedNpc.attacks.length > 0 ? (
 >
         <strong>🔫 {attack.name}</strong>
 
-        <p>
-          💥 Obrażenia: {attack.damage}
-        </p>
+       <p>
+  💥 Obrażenia:{' '}
+  <strong>
+    {attack.damage
+      ?.toLowerCase()
+      .startsWith('strength+')
+      ? `Siła + ${attack.damage.replace(/^strength\+/i, '')}`
+      : attack.damage}
+  </strong>
+</p>
 
         <p>
           PP: {attack.pp}
@@ -5637,35 +5811,81 @@ selectedNpc.attacks.length > 0 ? (
 
       <div className="npc-info-section">
 
-  <h3>🧬 CECHY</h3>
+ <h3>🧬 CECHY</h3>
 
-  <div className="npc-stats-grid npc-attributes-grid">
+<div className="npc-stats-grid npc-attributes-grid">
 
-        <div>
-          <strong>ZRĘCZNOŚĆ</strong>
-          <p>{selectedNpc.agility}</p>
-        </div>
+  <button
+    className="history-card"
+    onClick={() =>
+      rollNpcTrait(
+        selectedNpc,
+        'Zręczność',
+        selectedNpc.agility
+      )
+    }
+  >
+    <strong>🏃 ZRĘCZNOŚĆ</strong>
+    <p>{selectedNpc.agility}</p>
+  </button>
 
-        <div>
-          <strong>SPRYT</strong>
-          <p>{selectedNpc.smarts}</p>
-        </div>
+  <button
+    className="history-card"
+    onClick={() =>
+      rollNpcTrait(
+        selectedNpc,
+        'Spryt',
+        selectedNpc.smarts
+      )
+    }
+  >
+    <strong>🧠 SPRYT</strong>
+    <p>{selectedNpc.smarts}</p>
+  </button>
 
-        <div>
-          <strong>DUCH</strong>
-          <p>{selectedNpc.spirit}</p>
-        </div>
+  <button
+    className="history-card"
+    onClick={() =>
+      rollNpcTrait(
+        selectedNpc,
+        'Duch',
+        selectedNpc.spirit
+      )
+    }
+  >
+    <strong>👁️ DUCH</strong>
+    <p>{selectedNpc.spirit}</p>
+  </button>
 
-        <div>
-          <strong>SIŁA</strong>
-          <p>{selectedNpc.strength}</p>
-        </div>
+  <button
+    className="history-card"
+    onClick={() =>
+      rollNpcTrait(
+        selectedNpc,
+        'Siła',
+        selectedNpc.strength
+      )
+    }
+  >
+    <strong>💪 SIŁA</strong>
+    <p>{selectedNpc.strength}</p>
+  </button>
 
-        <div>
-          <strong>WIGOR</strong>
-          <p>{selectedNpc.vigor}</p>
-        </div>
-      </div>
+  <button
+    className="history-card"
+    onClick={() =>
+      rollNpcTrait(
+        selectedNpc,
+        'Wigor',
+        selectedNpc.vigor
+      )
+    }
+  >
+    <strong>🛡️ WIGOR</strong>
+    <p>{selectedNpc.vigor}</p>
+  </button>
+
+</div>
     </div>
 
       <div className="npc-info-section npc-skills-section">
