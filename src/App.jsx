@@ -795,6 +795,12 @@ const [galleryCategory, setGalleryCategory] = useState('Postacie')
 const [sharedGalleryImages, setSharedGalleryImages] = useState([])
 const [selectedGalleryImage, setSelectedGalleryImage] = useState(null)
 
+const [selectedGameMap, setSelectedGameMap] = useState(null)
+const [isGameMapOpen, setIsGameMapOpen] = useState(true)
+const [mapMarkerText, setMapMarkerText] = useState('H')
+const [mapMarkers, setMapMarkers] = useState([])
+
+
 const [gmNotes, setGmNotes] = useState('')
 
 const [npcs, setNpcs] = useState([])
@@ -932,6 +938,42 @@ useEffect(() => {
 
   return () => unsubscribe()
 }, [])
+
+useEffect(() => {
+  const gameMapRef = doc(
+    db,
+    'gallerySettings',
+    'gameMap'
+  )
+
+  const unsubscribe = onSnapshot(
+    gameMapRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+  setSelectedGameMap({
+    id: snapshot.data().imageId,
+    title: snapshot.data().title,
+    url: snapshot.data().url,
+  })
+
+  setMapMarkers(snapshot.data().markers || [])
+} else {
+  setSelectedGameMap(null)
+  setMapMarkers([])
+}
+    },
+    (error) => {
+      console.error(
+        'Błąd podczas pobierania mapy gry:',
+        error
+      )
+    }
+  )
+
+  return () => unsubscribe()
+}, [])
+
+
 
 useEffect(() => {
   async function loadGmNotes() {
@@ -1790,6 +1832,47 @@ localStorage.setItem(
 
 }
 
+function renderRecentRolls() {
+  const recentRolls = rollHistory.slice(0, 5)
+
+  return (
+    <section className="recent-rolls-panel">
+      <h3>🎲 OSTATNIE RZUTY</h3>
+
+      {recentRolls.length === 0 ? (
+        <p>Brak rzutów.</p>
+      ) : (
+        <div className="recent-rolls-list">
+          {recentRolls.map((roll) => (
+            <div
+              className="recent-roll-card"
+              key={roll.id}
+            >
+              <div className="recent-roll-header">
+                <strong>{roll.character}</strong>
+                <span>
+                  {roll.outcome || 'RZUT'}
+                </span>
+              </div>
+
+              <strong className="recent-roll-name">
+                {roll.label || roll.name}
+              </strong>
+
+              <div className="recent-roll-result">
+                Wynik:{' '}
+                <strong>{roll.result}</strong>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+
+
 function renderCard() {
     return (
       <section className="character-sheet">
@@ -2323,8 +2406,18 @@ function renderCard() {
 
   function renderTabContent() {
     if (activeTab === 'card') {
-      return renderCard()
-    }
+  return (
+    <div className="player-card-layout">
+      <div className="player-card-column">
+        {renderCard()}
+      </div>
+
+      <div className="player-rolls-column">
+        {renderRecentRolls()}
+      </div>
+    </div>
+  )
+}
 
     if (activeTab === 'rolls') {
   return (
@@ -2542,6 +2635,20 @@ if (activeTab === 'initiative') {
                 : `🃏 ${participant.card}`}
             </div>
 
+            {participant.card === '🃏 JOKER' && (
+  <div className="initiative-joker-message">
+    <strong>🃏 JOKER!</strong>
+    <p>
+      Postać może działać w dowolnym momencie rundy,
+      nawet przerywając akcję kogoś innego.
+    </p>
+    <p>
+      Ponadto otrzymuje w tej rundzie
+      <strong> +2 do testów Cech i do obrażeń.</strong>
+    </p>
+  </div>
+)}
+
           </div>
 
         )
@@ -2561,85 +2668,141 @@ if (activeTab === 'initiative') {
   return (
     <section className="tab-content">
 
-      <h2>🖼️ GALERIA</h2>
+      <div className="player-gallery-workspace">
 
-      {sharedGalleryImages.length > 0 ? (
+  <div className="player-gallery-column">
 
-  ['Postacie', 'NPC', 'Lokacje', 'Mapy', 'Inne'].map(
-    (category) => {
+    <h2>🖼️ GALERIA</h2>
 
-      const imagesInCategory = sharedGalleryImages.filter(
-        (image) =>
-          (image.category || 'Inne') === category
-      )
+    {sharedGalleryImages.length > 0 ? (
 
-      if (imagesInCategory.length === 0) {
-        return null
-      }
+      ['Postacie', 'NPC', 'Lokacje', 'Mapy', 'Inne'].map(
+        (category) => {
 
-      return (
+          const imagesInCategory = sharedGalleryImages
+            .filter(
+              (image) =>
+                (image.category || 'Inne') === category
+            )
+            .sort((a, b) =>
+              a.title.localeCompare(
+                b.title,
+                'pl',
+                { sensitivity: 'base' }
+              )
+            )
 
-        <div
-          key={category}
-          className="gallery-category"
-        >
+          if (imagesInCategory.length === 0) {
+            return null
+          }
 
-          <h3>
-            📁 {category.toUpperCase()}
-          </h3>
-
-          {imagesInCategory.map((image) => (
-
+          return (
             <div
-              className="gallery-player-view"
-              key={image.id}
+              key={category}
+              className="gallery-category"
             >
 
-              <h3>{image.title}</h3>
+              <h3>
+                📁 {category.toUpperCase()}
+              </h3>
 
-              <img
-                src={image.url}
-                alt={image.title}
-                onClick={() => setSelectedGalleryImage(image)}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '600px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                }}
-              />
+              <div className="gallery-image-grid">
+
+                {imagesInCategory.map((image) => (
+
+                  <div
+                    className="gallery-player-view"
+                    key={image.id}
+                  >
+
+                    <h3>{image.title}</h3>
+
+                    <img
+                      src={image.url}
+                      alt={image.title}
+                      onClick={() =>
+                        setSelectedGalleryImage(image)
+                      }
+                    />
+
+                  </div>
+
+                ))}
+
+              </div>
 
             </div>
-
-          ))}
-
-        </div>
-
+          )
+        }
       )
 
-    }
-  )
+    ) : (
 
-) : (
+      <p>
+        🙈 MG nie udostępnił obecnie żadnych grafik.
+      </p>
 
-  <p>
-    🙈 MG nie udostępnił obecnie żadnych grafik.
-  </p>
+    )}
 
-)}
+  </div>
+
+  <div className="player-game-map-column">
+
+    {selectedGameMap ? (
+
+      <>
+        <div className="player-game-map-header">
+          <h3>
+            🗺️ {selectedGameMap.title}
+          </h3>
+        </div>
+
+        <div className="player-game-map-image">
+  <div className="game-map-canvas">
+    {mapMarkers.map((marker) => (
+      <div
+        key={marker.id}
+        className="map-marker"
+        style={{
+          left: `${marker.x}%`,
+          top: `${marker.y}%`,
+        }}
+      >
+        {marker.text}
+      </div>
+    ))}
+
+    <img
+      src={selectedGameMap.url}
+      alt={selectedGameMap.title}
+      className="game-map-image"
+    />
+  </div>
+</div>
+      </>
+
+    ) : (
+
+      <div className="player-game-map-empty">
+        <h3>🗺️ MAPA GRY</h3>
+        <p>MG nie wybrał jeszcze mapy.</p>
+      </div>
+
+    )}
+
+  </div>
+
+</div>
 
 {selectedGalleryImage && (
-
   <div
     className="gallery-fullscreen-overlay"
     onClick={() => setSelectedGalleryImage(null)}
   >
-
     <div
       className="gallery-fullscreen-content"
       onClick={(event) => event.stopPropagation()}
     >
-
       <button
         className="clear-history-button"
         onClick={() => setSelectedGalleryImage(null)}
@@ -2658,13 +2821,9 @@ if (activeTab === 'initiative') {
           borderRadius: '8px',
         }}
       />
-
     </div>
-
   </div>
-
 )}
-
 
 
     </section>
@@ -2797,7 +2956,7 @@ if (activeTab === 'initiative') {
     <button
       type="button"
       className="roll-button"
-      onClick={() => {
+      onClick={async () => {
   const ammoCost = getBurstAmmoCost(burstSize)
 
   const weaponIndex = characterSheet.equipment.findIndex(
@@ -2839,6 +2998,8 @@ if (activeTab === 'initiative') {
     getCharacterStorageKey(characterSheet.storageName),
     JSON.stringify(updatedCharacter)
   )
+
+  await saveCharacterToFirestore(updatedCharacter)
 
  setBurstResult(result)
 
@@ -3031,31 +3192,69 @@ addRollToHistory({
 
     </div>
 
-    <button
-      className="roll-button"
-      onClick={() => {
+   <button
+  className="roll-button"
+  onClick={async () => {
+    const weaponIndex = characterSheet.equipment.findIndex(
+      (item) => item.name === selectedRoll.weaponName
+    )
 
-        const result = performRoll()
+    if (weaponIndex !== -1) {
+      const weapon = characterSheet.equipment[weaponIndex]
 
-          setRerollResult(null)
-          setChosenFinalResult(null)
-          setRollResult(result)
-          setBurstSize(null)
-          setBurstResult(null)
+      // Jeśli broń ma magazynek, zwykły strzał zużywa 1 nabój.
+      if (weapon.magazineSize !== undefined) {
+        if ((weapon.ammo ?? 0) < 1) {
+          alert('Brak amunicji')
+          return
+        }
 
-        addRollToHistory({
-          type: 'test',
-          character: characterSheet.name,
-          name: selectedRoll.name,
-          die: selectedRoll.die,
-          result: result.finalResult,
-          outcome: getRollOutcome(result.finalResult),
-        })
+        const updatedEquipment = characterSheet.equipment.map(
+          (item, index) =>
+            index === weaponIndex
+              ? {
+                  ...item,
+                  ammo: item.ammo - 1,
+                }
+              : item
+        )
 
-      }}
-    >
-      RZUĆ 🎲
-    </button>
+        const updatedCharacter = {
+          ...characterSheet,
+          equipment: updatedEquipment,
+        }
+
+        setCharacterSheet(updatedCharacter)
+
+        localStorage.setItem(
+          getCharacterStorageKey(characterSheet.storageName),
+          JSON.stringify(updatedCharacter)
+        )
+
+        await saveCharacterToFirestore(updatedCharacter)
+      }
+    }
+
+    const result = performRoll()
+
+    setRerollResult(null)
+    setChosenFinalResult(null)
+    setRollResult(result)
+    setBurstSize(null)
+    setBurstResult(null)
+
+    addRollToHistory({
+      type: 'test',
+      character: characterSheet.name,
+      name: selectedRoll.name,
+      die: selectedRoll.die,
+      result: result.finalResult,
+      outcome: getRollOutcome(result.finalResult),
+    })
+  }}
+>
+  RZUĆ 🎲
+</button>
   </>
 )}
 
@@ -5528,7 +5727,10 @@ if (
   selectedNpc &&
   selectedNpc !== 'new' && 
     !editingNpc && (
-    <section className="tab-content">
+    <section className="tab-content npc-main-layout">
+  <div className="npc-main-column">
+
+     
 
       <button
         className="logout-button"
@@ -6026,7 +6228,13 @@ if (
   🗑️ USUŃ NPC
 </button>
 
-    </section>
+    </div>
+
+    <div className="npc-rolls-column">
+      {renderRecentRolls()}
+    </div>
+
+  </section>
 )}
 
 
@@ -6170,8 +6378,24 @@ setDoc(
             : `🃏 ${participant.card}`}
         </div>
 
+           {participant.card === '🃏 JOKER' && (
+  <div className="initiative-joker-message">
+    <strong>🃏 JOKER!</strong>
+    <p>
+      Postać może działać w dowolnym momencie rundy,
+      nawet przerywając akcję kogoś innego.
+    </p>
+    <p>
+      Ponadto otrzymuje w tej rundzie
+      <strong> +2 do testów Cech i do obrażeń.</strong>
+    </p>
+  </div>
+)} 
+
+
+
         <button
-          className="clear-history-button initiative-delete-button"
+  className="clear-history-button initiative-delete-button initiative-delete"
           onClick={async () => {
             try {
               const newResults = initiativeResults.filter(
@@ -6212,9 +6436,10 @@ setDoc(
 )}
 
 {gmActiveTab === 'gallery' && (
+
   <section className="tab-content">
 
-    <h2>🖼️ GALERIA MG</h2>
+      <h2>🖼️ GALERIA MG</h2>
 
     <p>Wybierz grafikę z dysku i prześlij ją do galerii.</p>
 
@@ -6337,6 +6562,191 @@ setGalleryImages((currentImages) => [
   DEBUG: Udostępnione grafiki: {sharedGalleryImages.length}
 </p>
 
+
+<div className="game-map-selector">
+  <h3>🗺️ MAPA GRY</h3>
+
+  <select
+    className="game-map-select"
+    value={selectedGameMap?.id || ''}
+    onChange={async (event) => {
+      const mapId = event.target.value
+
+      if (!mapId) {
+        await deleteDoc(
+          doc(db, 'gallerySettings', 'gameMap')
+        )
+        setSelectedGameMap(null)
+        return
+      }
+
+      const selectedMap = galleryImages.find(
+        (image) => image.id === mapId
+      )
+
+      if (!selectedMap) return
+
+      try {
+        await setDoc(
+          doc(db, 'gallerySettings', 'gameMap'),
+          {
+            imageId: selectedMap.id,
+            title: selectedMap.title,
+            url: selectedMap.url,
+          }
+        )
+
+        setSelectedGameMap(selectedMap)
+      } catch (error) {
+        console.error(
+          'Błąd podczas ustawiania mapy gry:',
+          error
+        )
+      }
+    }}
+  >
+    <option value="">
+      — Wybierz mapę gry —
+    </option>
+
+    {galleryImages
+      .filter((image) => image.category === 'Mapy')
+      .sort((a, b) =>
+        a.title.localeCompare(
+          b.title,
+          'pl',
+          { sensitivity: 'base' }
+        )
+      )
+      .map((image) => (
+        <option
+          key={image.id}
+          value={image.id}
+        >
+          {image.title}
+        </option>
+      ))}
+  </select>
+</div>
+
+
+{selectedGameMap && (
+  <div className="game-map-preview">
+    <div className="game-map-header">
+      <h3>🗺️ {selectedGameMap.title}</h3>
+
+      <button
+        type="button"
+        className="game-map-toggle-button"
+        onClick={() =>
+          setIsGameMapOpen((current) => !current)
+        }
+      >
+        {isGameMapOpen
+          ? '▲ ZWIŃ MAPĘ'
+          : '▼ POKAŻ MAPĘ'}
+      </button>
+
+          <label className="map-marker-control">
+  ZNAK:
+  <input
+    type="text"
+    maxLength={2}
+    value={mapMarkerText}
+    onChange={(event) =>
+      setMapMarkerText(event.target.value)
+    }
+  />
+</label>
+
+
+    </div>
+
+    {isGameMapOpen && (
+      <div className="game-map-image-wrapper">
+  <div className="game-map-canvas">
+    {mapMarkers.map((marker) => (
+ <div
+  key={marker.id}
+  className="map-marker"
+  style={{
+    left: `${marker.x}%`,
+    top: `${marker.y}%`,
+  }}
+  onClick={async (event) => {
+  event.stopPropagation()
+
+  const updatedMarkers = mapMarkers.filter(
+    (currentMarker) => currentMarker.id !== marker.id
+  )
+
+  setMapMarkers(updatedMarkers)
+
+  try {
+    await setDoc(
+      doc(db, 'gallerySettings', 'gameMap'),
+      {
+        markers: updatedMarkers,
+      },
+      { merge: true }
+    )
+  } catch (error) {
+    console.error(
+      'Błąd podczas usuwania znacznika mapy:',
+      error
+    )
+  }
+}}
+>
+  {marker.text}
+</div>
+))}
+
+    <img
+      className="game-map-image"
+      src={selectedGameMap.url}
+      alt={selectedGameMap.title}
+      onClick={async (event) => {
+  const rect = event.currentTarget.getBoundingClientRect()
+
+  const x = ((event.clientX - rect.left) / rect.width) * 100
+  const y = ((event.clientY - rect.top) / rect.height) * 100
+
+  const newMarker = {
+    id: Date.now(),
+    text: mapMarkerText,
+    x,
+    y,
+  }
+
+  const updatedMarkers = [...mapMarkers, newMarker]
+
+  setMapMarkers(updatedMarkers)
+
+  try {
+    await setDoc(
+      doc(db, 'gallerySettings', 'gameMap'),
+      {
+        markers: updatedMarkers,
+      },
+      { merge: true }
+    )
+  } catch (error) {
+    console.error(
+      'Błąd podczas zapisywania znaczników mapy:',
+      error
+    )
+  }
+}}
+    />
+  </div>
+</div>
+    )}
+  </div>
+)}
+
+
+
     {galleryImages.length > 0 && (
       <div className="initiative-results">
 
@@ -6344,22 +6754,31 @@ setGalleryImages((currentImages) => [
 
 {['Postacie', 'NPC', 'Lokacje', 'Mapy', 'Inne'].map((category) => {
 
-  const imagesInCategory = galleryImages.filter(
+  const imagesInCategory = galleryImages
+  .filter(
     (image) => (image.category || 'Inne') === category
+  )
+  .sort((a, b) =>
+    a.title.localeCompare(
+      b.title,
+      'pl',
+      { sensitivity: 'base' }
+    )
   )
 
   return (
     <div key={category} className="gallery-category">
 
-      <h3>
-        📁 {category.toUpperCase()} ({imagesInCategory.length})
-      </h3>
+     <h3>
+  📁 {category.toUpperCase()} ({imagesInCategory.length})
+</h3>
 
-      {imagesInCategory.map((image) => (
+<div className="gallery-image-grid">
+  {imagesInCategory.map((image) => (
           <div
-            className="history-card"
-            key={image.id}
-          >
+  className="history-card gallery-image-card"
+  key={image.id}
+>
             <h3>{image.title}</h3>
 
             <img
@@ -6489,6 +6908,7 @@ setGalleryImages((currentImages) => [
                     </div>
 
         ))}
+        </div>
         
       </div>
 
@@ -6496,8 +6916,8 @@ setGalleryImages((currentImages) => [
   })}
 
       </div>
-    )}
-
+        )}
+   
   </section>
 )}
 

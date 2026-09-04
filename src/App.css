@@ -217,7 +217,7 @@ button {
 }
 
 .dashboard-content {
-  width: min(100% - 48px, 1100px);
+  width: min(100% - 48px, 1400px);
   margin: 0 auto;
   padding: 40px 0;
 }
@@ -1760,36 +1760,6 @@ button {
   gap: 8px;
 }
 
-.initiative-result-row {
-  display: grid;
-  grid-template-columns: 45px minmax(140px, 1fr) 110px auto;
-  align-items: center;
-  gap: 14px;
-
-  padding: 14px 16px;
-
-  border: 1px solid #555;
-  background: #303030;
-}
-
-.initiative-result-position {
-  font-size: 1.15rem;
-  font-weight: bold;
-  text-align: center;
-}
-
-.initiative-result-name {
-  font-size: 1.15rem;
-  font-weight: bold;
-  text-align: left;
-}
-
-.initiative-result-card {
-  font-size: 1.3rem;
-  font-weight: bold;
-  text-align: center;
-}
-
 .initiative-joker {
   font-size: 1.15rem;
   font-weight: bold;
@@ -2659,13 +2629,15 @@ button {
 ========================= */
 
 .tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-
   border-left: 1px solid #444;
   border-right: 1px solid #444;
   border-bottom: 1px solid #444;
-
   background: #191b1d;
 }
 
@@ -2819,18 +2791,21 @@ button {
   gap: 8px;
 }
 
-.initiative-result-row {
-  min-height: 48px;
-  padding: 8px 12px;
+/* =========================
+   INICJATYWA - WYNIKI
+========================= */
 
+.initiative-result-row {
   display: grid;
-  grid-template-columns: 45px 1fr auto;
+  grid-template-columns: 45px minmax(140px, 1fr) 110px auto;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  min-height: 48px;
+  padding: 12px 14px;
+  box-sizing: border-box;
 
   border: 1px solid #555;
   border-radius: 5px;
-
   background: #303030;
 
   transition:
@@ -2848,40 +2823,72 @@ button {
 .initiative-result-position {
   font-size: 1.15rem;
   font-weight: bold;
-
   color: #62c7d9;
-
   text-align: center;
 }
 
 .initiative-result-name {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: bold;
-
   color: #eee;
+  text-align: left;
 }
 
 .initiative-result-card {
   min-width: 65px;
-
   padding: 8px 12px;
-
   border: 1px solid #62c7d9;
   border-radius: 5px;
-
   background: #20282b;
-
   color: #f1f1f1;
-
   text-align: center;
-
   font-size: 1rem;
   font-weight: bold;
-
   box-shadow:
     0 0 8px rgba(98, 199, 217, 0.12);
 }
 
+.initiative-result-row+.initiative-result-row {
+  margin-top: 0;
+}
+
+/* =========================
+   KOMUNIKAT JOKERA
+========================= */
+
+.initiative-result-row {
+  grid-template-columns: 45px minmax(140px, 1fr) 110px auto;
+}
+
+.initiative-joker-message {
+  grid-column: 1 / -1;
+
+  margin-top: 4px;
+  padding: 10px 14px;
+
+  border-top: 1px solid #62c7d9;
+
+  text-align: center;
+  line-height: 1.4;
+}
+
+.initiative-joker-message>strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.initiative-joker-message p {
+  margin: 2px 0;
+  font-size: 0.9rem;
+}
+
+.initiative-delete {
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
+}
 
 /* =========================
    PRZYCISK CIĄGNIĘCIA KARTY
@@ -2941,6 +2948,73 @@ button {
   font-size: 1rem;
   letter-spacing: 1.5px;
 }
+
+.gallery-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.gallery-image-card {
+  margin: 0;
+  padding: 14px;
+  box-sizing: border-box;
+  min-width: 0;
+  text-align: center;
+}
+
+.gallery-image-card h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.gallery-image-card img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: contain;
+  margin: 0 auto 12px;
+  border-radius: 8px;
+}
+
+/* =========================
+   GALERIA - WIDOK GRACZA
+========================= */
+
+.gallery-player-view {
+  margin: 0;
+  padding: 14px;
+  box-sizing: border-box;
+  min-width: 0;
+  text-align: center;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #242424;
+}
+
+.gallery-player-view h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.gallery-player-view img {
+  display: block;
+  width: 100%;
+  height: 260px;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .gallery-image-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 
 /* =========================
@@ -3130,4 +3204,304 @@ button {
   font-weight: bold;
   letter-spacing: 0.4px;
   white-space: nowrap;
+}
+
+/* =========================
+   KARTA + OSTATNIE RZUTY
+========================= */
+
+.player-card-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.player-card-column {
+  min-width: 0;
+}
+
+.player-rolls-column {
+  min-width: 0;
+}
+
+/* =========================
+   OSTATNIE RZUTY - PANEL
+========================= */
+
+.player-rolls-column {
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+.recent-rolls-panel {
+  padding: 18px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #242424;
+  box-sizing: border-box;
+}
+
+.recent-rolls-panel > h3 {
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #555;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.recent-rolls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recent-roll-card {
+  padding: 12px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #303030;
+  box-sizing: border-box;
+}
+
+.recent-roll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.recent-roll-header span {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.recent-roll-name {
+  display: block;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.recent-roll-result {
+  font-size: 0.9rem;
+}
+
+.recent-roll-result strong {
+  font-size: 1.1rem;
+}
+
+/* =========================
+   NPC + OSTATNIE RZUTY
+========================= */
+
+.npc-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+  box-sizing: border-box;
+}
+
+.npc-main-column {
+  min-width: 0;
+}
+
+.npc-rolls-column {
+  min-width: 0;
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .npc-main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .npc-rolls-column {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+
+/* =========================
+   MAPA GRY - PODGLĄD
+========================= */
+
+.game-map-preview {
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #242424;
+  box-sizing: border-box;
+}
+
+.game-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.game-map-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.game-map-toggle-button {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #303030;
+  color: #f1f1f1;
+  cursor: pointer;
+}
+
+.game-map-toggle-button:hover {
+  background: #363636;
+}
+
+.game-map-image-wrapper {
+  position: relative;
+  max-height: 70vh;
+  overflow: auto;
+  text-align: center;
+}
+
+.game-map-image-wrapper img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  margin: 0 auto;
+  border-radius: 8px;
+}
+
+/* =========================
+   GALERIA - PRZYCISKI
+========================= */
+
+.gallery-image-card .roll-button,
+.gallery-image-card .clear-history-button {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 8px 0 0;
+  padding: 9px 8px;
+  box-sizing: border-box;
+
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.gallery-image-card .roll-button {
+  min-height: 44px;
+}
+
+.gallery-image-card .clear-history-button {
+  min-height: 40px;
+}
+
+/* =========================
+   WYBÓR MAPY GRY
+========================= */
+
+.game-map-selector {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #242424;
+  box-sizing: border-box;
+}
+
+.game-map-selector h3 {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.game-map-select {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #303030;
+  color: #f1f1f1;
+
+  font-size: 1rem;
+}
+
+
+/* =========================
+   GALERIA GRACZA - MAPA NA GÓRZE
+========================= */
+
+.player-gallery-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.player-game-map-column {
+  order: -1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.player-game-map-image img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+
+.map-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  min-width: 34px;
+  height: 34px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #c62828;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+
+}
+
+.game-map-canvas {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.game-map-canvas .game-map-image {
+  display: block;
 }
