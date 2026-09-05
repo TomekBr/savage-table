@@ -2834,7 +2834,7 @@ if (activeTab === 'initiative') {
   if (selectedCharacter && activeCharacterName) {
 
   return (
-        <main className="dashboard">
+        <main className="dashboard player-dashboard">
           <header className="topbar">
             <div className="logo">SAVAGE TABLE</div>
 
@@ -2880,7 +2880,7 @@ if (activeTab === 'initiative') {
             </button>
           </nav>
 
-          <div className="dashboard-content">
+          <div className="dashboard-content player-dashboard-content">
             {renderTabContent()}
           </div>
 
