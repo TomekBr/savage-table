@@ -4,7 +4,7 @@ import './App.css'
 
 
 import hammerPortrait from './assets/Hammer.png'
-import żmijewskiPortrait from './assets/Żmijewski.png'
+import żmijewskiPortrait from './assets/Żmijewski.png.jpg'
 import kalePortrait from './assets/Kale_Iona.png'
 import mason from './assets/mason.jpg'
 import rook from './assets/rook.png'
@@ -1502,20 +1502,25 @@ function performRoll() {
   const traitResult = rollExplodingDie(selectedRoll.die)
   const wildResult = rollExplodingDie('d6')
 
-  const chosenResult = Math.max(
-    traitResult.total,
-    wildResult.total
-  )
+ const chosenResult = Math.max(
+  traitResult.total,
+  wildResult.total
+)
 
-  const finalResult = chosenResult + rollModifier
+const finalResult = chosenResult + rollModifier
 
-  return {
-    traitResult,
-    wildResult,
-    chosenResult,
-    modifier: rollModifier,
-    finalResult,
-  }
+const isCriticalFailure =
+  traitResult.rolls[0] === 1 &&
+  wildResult.rolls[0] === 1
+
+return {
+  traitResult,
+  wildResult,
+  chosenResult,
+  modifier: rollModifier,
+  finalResult,
+  isCriticalFailure,
+}
 }
 
 function getBurstAmmoCost(rateOfFire) {
@@ -1570,6 +1575,10 @@ function performBurstRoll(rateOfFire) {
     (result) => result.finalResult >= 8
   ).length
 
+  const isCriticalFailure =
+  wildResult.rolls[0] === 1 &&
+ shots.some((shot) => shot.rolls[0] === 1)
+
   return {
     shots,
     wildResult,
@@ -1577,6 +1586,7 @@ function performBurstRoll(rateOfFire) {
     successCount,
     raiseCount,
     modifier: rollModifier,
+    isCriticalFailure,
   }
 }
 
@@ -3087,9 +3097,21 @@ addRollToHistory({
   </div>
 )}
 
+{burstResult?.isCriticalFailure && (
+  <div className="critical-failure-message">
+    💀 PECH!
+    <br />
+    Nie można przerzucić tej serii Fuksem.
+  </div>
+)}
+
+
 {burstResult &&
   !burstRerollResult &&
-  characterSheet.status.bennies > 0 && (
+  characterSheet.status.bennies > 0 &&
+   !burstResult.isCriticalFailure && (
+    
+    
     <button
       type="button"
       className="reroll-button"
@@ -3305,6 +3327,15 @@ addRollToHistory({
         <strong>{rollResult.finalResult}</strong>
       </div>
 
+              {rollResult.isCriticalFailure && (
+  <div className="critical-failure-message">
+    💀 PECH!
+    <br />
+    Obie kości wypadły 1. Tego rzutu nie można przerzucić Fuksem.
+  </div>
+)}
+
+
       <div
   className={`roll-outcome ${getRollOutcomeClass(
     rollResult.finalResult
@@ -3314,7 +3345,9 @@ addRollToHistory({
 </div>
     </div>
 
-    {characterSheet.status.bennies > 0 && !rerollResult && (
+    {characterSheet.status.bennies > 0 &&
+  !rerollResult &&
+  !rollResult.isCriticalFailure && (
       <button
         className="reroll-button"
         onClick={() => {
