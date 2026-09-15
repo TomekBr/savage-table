@@ -18,7 +18,8 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage'
-import { storage, db } from './firebase'
+import { storage, db, auth } from './firebase'
+import { signInAnonymously } from 'firebase/auth'
 import {
   collection,
   addDoc,
@@ -868,6 +869,20 @@ useEffect(() => {
 
 
   loadGalleryImages()
+}, [])
+
+
+useEffect(() => {
+  signInAnonymously(auth)
+    .then(() => {
+      console.log('Firebase Auth: zalogowano anonimowo')
+    })
+    .catch((error) => {
+      console.error(
+        'Błąd anonimowego logowania Firebase:',
+        error
+      )
+    })
 }, [])
 
 useEffect(() => {
@@ -1755,14 +1770,14 @@ async function loginCharacter() {
         localStorage.getItem(storageKey)
 
       if (savedCharacterSheet) {
-        const savedSheet = JSON.parse(savedCharacterSheet)
+  const savedSheet = JSON.parse(savedCharacterSheet)
 
-        setCharacterSheet({
-          ...defaultCharacterSheet,
-          ...savedSheet,
-          portrait: defaultCharacterSheet.portrait,
-        })
-      } else {
+  setCharacterSheet({
+    ...defaultCharacterSheet,
+    ...savedSheet,
+    portrait: defaultCharacterSheet.portrait,
+  })
+} else {
         localStorage.setItem(
           storageKey,
           JSON.stringify(defaultCharacterSheet)
@@ -1806,7 +1821,7 @@ async function loginCharacter() {
   setActiveCharacterName(characterName)
   setActiveTab('card')
 }
-
+  
 function goBack() {
 
   setSelectedCharacter(null)
