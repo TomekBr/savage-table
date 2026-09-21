@@ -6,7 +6,7 @@ import './App.css'
 import hammerPortrait from './assets/Hammer.png'
 import żmijewskiPortrait from './assets/Żmijewski.png.jpg'
 import kalePortrait from './assets/Kale_Iona.png'
-import mason from './assets/mason.jpg'
+import mason from './assets/mason.jpg.png'
 import rook from './assets/rook.png'
 import alienBackground from './assets/savage-table-bg.jpg'
 
